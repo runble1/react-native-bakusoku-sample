@@ -5,11 +5,14 @@ import {
   View,
   ScrollView,
   Picker,
+  DatePickerIOS,
   Dimensions,
   LayoutAnimation,
-  UIManager
+  UIManager,
+  Platform
 } from "react-native";
 import { Header, ListItem, Icon } from "react-native-elements";
+import DatePicker from "react-native-datepicker";
 
 // 評価ランクに関する定数
 const GREAT = "sentiment-very-satisfied";
@@ -104,6 +107,70 @@ class AddScreen extends React.Component {
     }
   }
 
+  // 出国日のプルダウンメニューを描画
+  renderDateFromPicker() {
+    if (this.state.dateFromPickerVisible) {
+      switch (Platform.OS) {
+        // iOSだったら、
+        case "ios":
+          return (
+            <DatePickerIOS
+              mode="date"
+              date={new Date(this.state.chosenDateFrom)}
+              onDateChange={date => {
+                // `date` = "Thu Oct 04 2018 17:00:00 GMT+0900 (JST)"
+
+                // "Thu Oct 04 2018 17:00:00 GMT+0900 (JST)" ---> "2018/10/04 17:00:00"
+                const dateString = date.toLocaleString("ja");
+
+                this.setState({
+                  tripDetail: {
+                    ...this.state.tripDetail,
+                    dateFrom: dateString.split(" ")[0] // "2018/10/04 17:00:00" ---> "2018/10/04"
+                  },
+                  chosenDateFrom: dateString,
+                  chosenDateTo: dateString // 帰国日の初期選択日付を出国日にセットする
+                });
+              }}
+            />
+          );
+        // Androidだったら、
+        case "android":
+          return (
+            <DatePicker
+              mode="date"
+              date={new Date(this.state.chosenDateFrom)}
+              format="YYYY-MM-DD"
+              confirmBtnText="OK"
+              cancelBtnText="キャンセル"
+              onDateChange={date => {
+                // `date` = "2018-10-04 17:00"
+
+                // "2018-10-04 17:00" ---> "2018-10-04 17:00:00"
+                let dateString = `${date}:00`;
+
+                // "2018-10-04 17:00:00" ---> "2018/10/04 17:00:00"
+                dateString = dateString.replace(/-/g, "/");
+
+                this.setState({
+                  tripDetail: {
+                    ...this.state.tripDetail,
+                    dateFrom: dateString.split(" ")[0] // "2018/10/04 17:00:00" ---> "2018/10/04"
+                  },
+                  chosenDateFrom: dateString,
+                  chosenDateTo: dateString // 帰国日の初期選択日付を出国日にセットする
+                });
+              }}
+            />
+          );
+        // iOSでもAndroidでもなかったら、
+        default:
+          // 何も描画しない
+          return <View />;
+      }
+    }
+  }
+
   render() {
     return (
       <View style={{ flex: 1 }}>
@@ -171,7 +238,45 @@ class AddScreen extends React.Component {
               })
             }
           />
+
           {this.renderCountryPicker()}
+
+          <ListItem
+            title="Date: "
+            subtitle={
+              <View style={styles.listItemStyle}>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    // 現在の選択肢`this.state`が`INITIAL_STATE`のままなら灰色、それ以外の選択肢なら黒色
+                    color:
+                      this.state.tripDetail.dateFrom ===
+                      INITIAL_STATE.tripDetail.dateFrom
+                        ? "gray"
+                        : "black"
+                  }}
+                >
+                  {this.state.tripDetail.dateFrom}
+                </Text>
+              </View>
+            }
+            // プルダウンメニューが開いてれば上矢印、閉じてれば下矢印
+            rightIcon={{
+              name: this.state.dateFromPickerVisible
+                ? "keyboard-arrow-up"
+                : "keyboard-arrow-down"
+            }}
+            // 項目欄ListItemを押されたら、
+            onPress={() =>
+              this.setState({
+                countryPickerVisible: false, // 国選択のプルダウンメニューは閉じる
+                dateFromPickerVisible: !this.state.dateFromPickerVisible, // 出国日選択のプルダウンメニューの開閉を切り替え
+                dateToPickerVisible: false // 帰国日選択のプルダウンメニューは閉じる
+              })
+            }
+          />
+
+          {this.renderDateFromPicker()}
         </ScrollView>
       </View>
     );
